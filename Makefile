@@ -15,7 +15,8 @@ build:
 
 build-release:
 	grunt build
-	docker run --rm -v $(shell pwd):/src centurylink/golang-builder
+	docker run --rm -v $(shell pwd):/src -e BUILD_GOOS=linux -e BUILD_GOARCH=arm centurylink/golang-builder-cross
+	mv dockerui-linux-arm dockerui
 	shasum dockerui > dockerui-checksum.txt
 
 test:
