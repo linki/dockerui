@@ -1,8 +1,8 @@
 angular.module('dockerui.services', ['ngResource'])
-    .factory('Container', function ($resource, Settings) {
+    .factory('Container', ['$resource', 'Settings', function ContainerFactory($resource, Settings) {
         'use strict';
         // Resource for interacting with the docker containers
-        // http://docs.docker.io/en/latest/api/docker_remote_api.html#containers
+        // http://docs.docker.com/reference/api/docker_remote_api_<%= remoteApiVersion %>/#2-1-containers
         return $resource(Settings.url + '/containers/:id/:action', {
             name: '@name'
         }, {
@@ -17,28 +17,31 @@ angular.module('dockerui.services', ['ngResource'])
             changes: {method: 'GET', params: {action: 'changes'}, isArray: true},
             create: {method: 'POST', params: {action: 'create'}},
             remove: {method: 'DELETE', params: {id: '@id', v: 0}},
-            rename: {method: 'POST', params: {id: '@id', action: 'rename'}, isArray: false}
+            rename: {method: 'POST', params: {id: '@id', action: 'rename'}, isArray: false},
+            stats: {method: 'GET', params: {id: '@id', stream: false, action: 'stats'}, timeout: 2000}
         });
-    })
-    .factory('ContainerCommit', function ($resource, $http, Settings) {
+    }])
+    .factory('ContainerCommit', ['$resource', '$http', 'Settings', function ContainerCommitFactory($resource, $http, Settings) {
         'use strict';
+        // http://docs.docker.com/reference/api/docker_remote_api_<%= remoteApiVersion %>/#create-a-new-image-from-a-container-s-changes
         return {
             commit: function (params, callback) {
-                   $http({
-                       method: 'POST',
-                       url: Settings.url + '/commit',
-                       params: {
-                           'container': params.id,
-                           'repo': params.repo
-                       }
-                   }).success(callback).error(function (data, status, headers, config) {
-                       console.log(error, data);
-                   });
+                $http({
+                    method: 'POST',
+                    url: Settings.url + '/commit',
+                    params: {
+                        'container': params.id,
+                        'repo': params.repo
+                    }
+                }).success(callback).error(function (data, status, headers, config) {
+                    console.log(error, data);
+                });
             }
         };
-    })
-    .factory('ContainerLogs', function ($resource, $http, Settings) {
+    }])
+    .factory('ContainerLogs', ['$resource', '$http', 'Settings', function ContainerLogsFactory($resource, $http, Settings) {
         'use strict';
+        // http://docs.docker.com/reference/api/docker_remote_api_<%= remoteApiVersion %>/#get-container-logs
         return {
             get: function (id, params, callback) {
                 $http({
@@ -55,9 +58,10 @@ angular.module('dockerui.services', ['ngResource'])
                 });
             }
         };
-    })
-    .factory('ContainerTop', function ($http, Settings) {
+    }])
+    .factory('ContainerTop', ['$http', 'Settings', function ($http, Settings) {
         'use strict';
+        // http://docs.docker.com/reference/api/docker_remote_api_<%= remoteApiVersion %>/#list-processes-running-inside-a-container
         return {
             get: function (id, params, callback, errorCallback) {
                 $http({
@@ -69,53 +73,51 @@ angular.module('dockerui.services', ['ngResource'])
                 }).success(callback);
             }
         };
-    })
-    .factory('Image', function ($resource, Settings) {
+    }])
+    .factory('Image', ['$resource', 'Settings', function ImageFactory($resource, Settings) {
         'use strict';
-        // Resource for docker images
-        // http://docs.docker.io/en/latest/api/docker_remote_api.html#images
+        // http://docs.docker.com/reference/api/docker_remote_api_<%= remoteApiVersion %>/#2-2-images
         return $resource(Settings.url + '/images/:id/:action', {}, {
             query: {method: 'GET', params: {all: 0, action: 'json'}, isArray: true},
             get: {method: 'GET', params: {action: 'json'}},
             search: {method: 'GET', params: {action: 'search'}},
             history: {method: 'GET', params: {action: 'history'}, isArray: true},
-            create: {method: 'POST', isArray: true, transformResponse: [function f(data) {
-                var str = data.replace(/\n/g, " ").replace(/\}\W*\{/g, "}, {");
-                return angular.fromJson("[" + str + "]");
-            }],
-                params: {action: 'create', fromImage: '@fromImage', repo: '@repo', tag: '@tag', registry: '@registry'}},
+            create: {
+                method: 'POST', isArray: true, transformResponse: [function f(data) {
+                    var str = data.replace(/\n/g, " ").replace(/\}\W*\{/g, "}, {");
+                    return angular.fromJson("[" + str + "]");
+                }],
+                params: {action: 'create', fromImage: '@fromImage', repo: '@repo', tag: '@tag', registry: '@registry'}
+            },
             insert: {method: 'POST', params: {id: '@id', action: 'insert'}},
             push: {method: 'POST', params: {id: '@id', action: 'push'}},
-            tag: {method: 'POST', params: {id: '@id', action: 'tag', force: 0, repo: '@repo'}},
+            tag: {method: 'POST', params: {id: '@id', action: 'tag', force: 0, repo: '@repo', tag: '@tag'}},
             remove: {method: 'DELETE', params: {id: '@id'}, isArray: true}
         });
-    })
-    .factory('Docker', function ($resource, Settings) {
+    }])
+    .factory('Docker', ['$resource', 'Settings', function DockerFactory($resource, Settings) {
         'use strict';
-        // Information for docker
-        // http://docs.docker.io/en/latest/api/docker_remote_api.html#display-system-wide-information
+        // http://docs.docker.com/reference/api/docker_remote_api_<%= remoteApiVersion %>/#show-the-docker-version-information
         return $resource(Settings.url + '/version', {}, {
             get: {method: 'GET'}
         });
-    })
-    .factory('Auth', function ($resource, Settings) {
+    }])
+    .factory('Auth', ['$resource', 'Settings', function AuthFactory($resource, Settings) {
         'use strict';
-        // Auto Information for docker
-        // http://docs.docker.io/en/latest/api/docker_remote_api.html#set-auth-configuration
+        // http://docs.docker.com/reference/api/docker_remote_api_<%= remoteApiVersion %>/#check-auth-configuration
         return $resource(Settings.url + '/auth', {}, {
             get: {method: 'GET'},
             update: {method: 'POST'}
         });
-    })
-    .factory('System', function ($resource, Settings) {
+    }])
+    .factory('System', ['$resource', 'Settings', function SystemFactory($resource, Settings) {
         'use strict';
-        // System for docker
-        // http://docs.docker.io/en/latest/api/docker_remote_api.html#display-system-wide-information
+        // http://docs.docker.com/reference/api/docker_remote_api_<%= remoteApiVersion %>/#display-system-wide-information
         return $resource(Settings.url + '/info', {}, {
             get: {method: 'GET'}
         });
-    })
-    .factory('Settings', function (DOCKER_ENDPOINT, DOCKER_PORT, DOCKER_API_VERSION, UI_VERSION) {
+    }])
+    .factory('Settings', ['DOCKER_ENDPOINT', 'DOCKER_PORT', 'DOCKER_API_VERSION', 'UI_VERSION', function SettingsFactory(DOCKER_ENDPOINT, DOCKER_PORT, DOCKER_API_VERSION, UI_VERSION) {
         'use strict';
         var url = DOCKER_ENDPOINT;
         if (DOCKER_PORT) {
@@ -130,8 +132,8 @@ angular.module('dockerui.services', ['ngResource'])
             url: url,
             firstLoad: true
         };
-    })
-    .factory('ViewSpinner', function () {
+    }])
+    .factory('ViewSpinner', function ViewSpinnerFactory() {
         'use strict';
         var spinner = new Spinner();
         var target = document.getElementById('view');
@@ -145,7 +147,7 @@ angular.module('dockerui.services', ['ngResource'])
             }
         };
     })
-    .factory('Messages', function ($rootScope) {
+    .factory('Messages', ['$rootScope', function MessagesFactory($rootScope) {
         'use strict';
         return {
             send: function (title, text) {
@@ -173,9 +175,10 @@ angular.module('dockerui.services', ['ngResource'])
                 });
             }
         };
-    })
-    .factory('Dockerfile', function (Settings) {
+    }])
+    .factory('Dockerfile', ['Settings', function DockerfileFactory(Settings) {
         'use strict';
+        // http://docs.docker.com/reference/api/docker_remote_api_<%= remoteApiVersion %>/#build-image-from-a-dockerfile
         var url = Settings.rawUrl + '/build';
         return {
             build: function (file, callback) {
@@ -189,10 +192,9 @@ angular.module('dockerui.services', ['ngResource'])
                 request.send(data);
             }
         };
-    })
-    .factory('LineChart', function (Settings) {
+    }])
+    .factory('LineChart', ['Settings', function LineChartFactory(Settings) {
         'use strict';
-        var url = Settings.rawUrl + '/build';
         return {
             build: function (id, data, getkey) {
                 var chart = new Chart($(id).get(0).getContext("2d"));
@@ -213,11 +215,15 @@ angular.module('dockerui.services', ['ngResource'])
                 var labels = [];
                 data = [];
                 var keys = Object.keys(map);
+                var max = 1;
 
                 for (i = keys.length - 1; i > -1; i--) {
                     var k = keys[i];
                     labels.push(k);
                     data.push(map[k]);
+                    if (map[k] > max) {
+                      max = map[k];
+                    }
                 }
                 var dataset = {
                     fillColor: "rgba(151,187,205,0.5)",
@@ -234,8 +240,8 @@ angular.module('dockerui.services', ['ngResource'])
                         scaleStepWidth: 1,
                         pointDotRadius: 1,
                         scaleOverride: true,
-                        scaleSteps: labels.length
+                        scaleSteps: max
                     });
             }
         };
-    });
+    }]);
